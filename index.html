@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>Braize Vault</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --orange: #FF4D00;
+    --bg:     #0a0a0a;
+    --panel:  #151515;
+    --line:   #2a2a2a;
+    --text:   #f2f2f2;
+    --muted:  #8a8a8a;
+    --good:   #34c759;
+    --warn:   #ffb020;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.45 "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overscroll-behavior: none;
+  }
+
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px 10px; border-bottom: 1px solid var(--line);
+  }
+  .brand {
+    font-family: "Barlow Condensed", system-ui, sans-serif;
+    font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    font-size: 19px;
+  }
+  .brand b { color: var(--orange); font-weight: 700; }
+  .spacer { flex: 1; }
+  .chip {
+    font-size: 12px; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+  }
+  .chip.pending { color: var(--warn); border-color: #4a3a10; }
+  .chip.ok      { color: var(--good); border-color: #17361f; }
+  .chip.install {
+    background: var(--orange); border-color: var(--orange); color: #0a0a0a;
+    font-weight: 700; cursor: pointer;
+  }
+  .iconbtn {
+    background: none; border: 0; color: var(--muted);
+    font-size: 20px; padding: 6px 4px; cursor: pointer;
+  }
+
+  main { flex: 1; display: flex; flex-direction: column; padding: 16px; gap: 14px; min-height: 0; }
+
+  #text {
+    flex: 1; min-height: 120px; width: 100%; resize: none;
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; font: inherit; line-height: 1.5;
+  }
+  #text:focus { outline: none; border-color: var(--orange); }
+  #text::placeholder { color: #5a5a5a; }
+  #interim { color: var(--muted); font-style: italic; min-height: 1.2em; padding: 0 2px; }
+
+  .micwrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  #mic {
+    width: 128px; height: 128px; border-radius: 50%;
+    border: 2px solid var(--line); background: var(--panel);
+    color: var(--text); font-size: 46px; cursor: pointer;
+    display: grid; place-items: center; transition: transform .08s ease;
+  }
+  #mic:active { transform: scale(.96); }
+  #mic.live {
+    background: var(--orange); border-color: var(--orange); color: #0a0a0a;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,77,0,.45); }
+    50%     { box-shadow: 0 0 0 18px rgba(255,77,0,0); }
+  }
+  #michint { color: var(--muted); font-size: 13px; text-align: center; min-height: 1.2em; }
+
+  .row { display: flex; gap: 10px; }
+  button.big {
+    flex: 1; padding: 16px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--text);
+    font: 600 16px/1 "Barlow", system-ui, sans-serif; cursor: pointer;
+  }
+  button.primary { background: var(--orange); border-color: var(--orange); color: #0a0a0a; }
+  button.big:disabled { opacity: .4; }
+
+  #flash {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    background: var(--panel); border: 1px solid var(--line);
+    padding: 11px 18px; border-radius: 999px; font-size: 14px;
+    opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 40;
+  }
+  #flash.show { opacity: 1; }
+  #flash.good { border-color: #17361f; color: var(--good); }
+  #flash.bad  { border-color: #4a1c1c; color: #ff6b6b; }
+
+  dialog {
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--line); border-radius: 14px;
+    width: min(460px, 92vw); padding: 20px;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.72); }
+  dialog h2 { margin: 0 0 4px; font-size: 17px; }
+  dialog p.sub { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; }
+  input {
+    width: 100%; padding: 11px; border-radius: 9px;
+    border: 1px solid var(--line); background: #0d0d0d; color: var(--text);
+    font: 15px/1.2 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  input:focus { outline: none; border-color: var(--orange); }
+  .note {
+    margin-top: 16px; padding: 11px; border-radius: 9px;
+    background: #0d0d0d; border: 1px solid var(--line);
+    color: var(--muted); font-size: 12.5px; line-height: 1.5;
+  }
+  .note b { color: var(--text); }
+  ul.shapes { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  ul.shapes li { margin: 5px 0; }
+  ul.shapes code { color: var(--text); font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">Brai<b>z</b>e Vault</span>
+  <span class="spacer"></span>
+  <button class="chip install" id="install" hidden>⬇ Install</button>
+  <span class="chip" id="status">—</span>
+  <button class="iconbtn" id="help"  title="What you can say">?</button>
+  <button class="iconbtn" id="gear"  title="Settings">⚙</button>
+</header>
+
+<main>
+  <textarea id="text" placeholder="Talk, or type. Nothing here asks you a question."></textarea>
+  <div id="interim"></div>
+
+  <div class="micwrap">
+    <button id="mic" aria-label="Start talking">🎤</button>
+    <div id="michint">Tap and talk</div>
+  </div>
+
+  <div class="row">
+    <button class="big" id="clear">Clear</button>
+    <button class="big primary" id="bank">Bank it</button>
+  </div>
+</main>
+
+<div id="flash"></div>
+
+<dialog id="cfg">
+  <h2>Settings</h2>
+  <p class="sub">Stored on this phone only. Nothing is sent anywhere else.</p>
+  <label for="owner">GitHub owner</label>
+  <input id="owner" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Braizebbq">
+  <label for="repo">Repo</label>
+  <input id="repo" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="braize-idea-vault">
+  <label for="branch">Branch</label>
+  <input id="branch" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="master">
+  <label for="token">Fine-grained token</label>
+  <input id="token" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_…">
+  <div class="note">
+    Give the token access to <b>that one repo only</b>, with
+    <b>Contents: Read and write</b> and nothing else. It never leaves this
+    phone — captures are sent straight to GitHub from here, with no server in
+    between.
+  </div>
+  <div class="row" style="margin-top:18px">
+    <button class="big" id="cfgtest">Test</button>
+    <button class="big primary" id="cfgsave">Save</button>
+  </div>
+</dialog>
+
+<dialog id="shapes">
+  <h2>What you can say</h2>
+  <p class="sub">Say it however you actually say it. Nothing is ever dropped.</p>
+  <ul class="shapes">
+    <li><code>the timer should flash before food burns</code> — just a thought</li>
+    <li><code>create folder chicken rack</code> — makes a folder to think in</li>
+    <li><code>reference folder chicken rack</code> — later thoughts go in it</li>
+    <li><code>add to chicken rack: it should fold flat</code> — one note</li>
+    <li><code>product idea: …</code> / <code>ai build: …</code> — scaffolds a folder</li>
+    <li><code>add image to social command center</code> — stages an action</li>
+    <li><code>bug in order tracker: …</code> — files as a defect</li>
+  </ul>
+  <div class="note">
+    This app only stores your words. Folders and actions are created at the PC
+    when you run <b>/triage</b> — so a capture can never fail just because
+    something else is unreachable.
+  </div>
+  <div class="row" style="margin-top:18px">
+    <button class="big primary" id="shapesclose">Got it</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const CFG_KEY = 'braize_vault_cfg';
+  const Q_KEY   = 'braize_vault_queue';
+
+  const cfg = Object.assign(
+    { owner: 'Braizebbq', repo: 'braize-idea-vault', branch: 'master', token: '' },
+    JSON.parse(localStorage.getItem(CFG_KEY) || '{}')
+  );
+  const saveCfg = () => localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+
+  const queue     = () => JSON.parse(localStorage.getItem(Q_KEY) || '[]');
+  const setQueue  = q  => localStorage.setItem(Q_KEY, JSON.stringify(q));
+
+  // ── flash + status ───────────────────────────────────────────────────────
+  let flashTimer;
+  function flash(msg, kind) {
+    const el = $('flash');
+    el.textContent = msg;
+    el.className = 'show ' + (kind || '');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => { el.className = ''; }, 2600);
+  }
+
+  function paintStatus() {
+    const n  = queue().length;
+    const el = $('status');
+    // Never hide a pending count behind the setup warning — the count is the
+    // proof that nothing was lost, and it is the thing worth seeing.
+    if (!cfg.token) {
+      el.textContent = n ? (n + ' held · set up') : 'set up';
+      el.className   = 'chip pending';
+    } else if (n === 0) {
+      el.textContent = 'all synced';
+      el.className   = 'chip ok';
+    } else {
+      el.textContent = n + ' waiting';
+      el.className   = 'chip pending';
+    }
+  }
+
+  // ── the capture itself ───────────────────────────────────────────────────
+  // Rule one of this whole system: a capture cannot fail. The thought goes to
+  // local storage FIRST and is reported banked immediately. The network is a
+  // background detail that retries forever and can never lose anything.
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function bank(thought) {
+    thought = (thought || '').trim();
+    if (!thought) return false;
+
+    const d = new Date();
+    const stamp =
+      d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' +
+      pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    const rand = Math.random().toString(36).slice(2, 6);
+    const human =
+      d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+      ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+
+    // Same shape the Telegram bot writes, so both front doors are identical.
+    const body = '### ' + human + ' - unrouted\n_via phone_\n\n' + thought + '\n';
+
+    const q = queue();
+    q.push({ name: 'inbox.d/' + stamp + '-' + rand + '.md', body: body, tries: 0 });
+    setQueue(q);
+
+    paintStatus();
+    flash('Banked', 'good');
+    flush();
+    return true;
+  }
+
+  // ── sync to GitHub ───────────────────────────────────────────────────────
+  function b64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  }
+
+  let flushing = false;
+  async function flush() {
+    if (flushing || !cfg.token || !navigator.onLine) return;
+    flushing = true;
+    try {
+      let q = queue();
+      while (q.length) {
+        const item = q[0];
+        let res;
+        try {
+          res = await fetch(
+            'https://api.github.com/repos/' + cfg.owner + '/' + cfg.repo +
+            '/contents/' + item.name,
+            {
+              method: 'PUT',
+              headers: {
+                'Authorization': 'Bearer ' + cfg.token,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                message: 'capture: unrouted (phone)',
+                content: b64(item.body),
+                branch: cfg.branch
+              })
+            }
+          );
+        } catch (e) {
+          break;                       // offline or flaky — keep it, try later
+        }
+
+        if (res.status === 201 || res.status === 200 || res.status === 422) {
+          // 422 means that path already exists: already delivered, drop it.
+          q.shift();
+          setQueue(q);
+        } else if (res.status === 401 || res.status === 403 || res.status === 404) {
+          flash('GitHub refused — check settings', 'bad');
+          break;                       // a bad token must not spin forever
+        } else {
+          item.tries = (item.tries || 0) + 1;
+          setQueue(q);
+          break;
+        }
+      }
+    } finally {
+      flushing = false;
+      paintStatus();
+    }
+  }
+
+  window.addEventListener('online', flush);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) flush(); });
+
+  // ── speech ───────────────────────────────────────────────────────────────
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false;
+  // Text that was in the box before the whole listening RUN started. Set once
+  // when the mic is tapped, never touched again until it is tapped again.
+  let baseText = '';
+  // Final text from recognition sessions that have already ENDED during this
+  // run. Chrome stops on its own every few seconds, so one run is many
+  // sessions; this is what carries across them.
+  let committed = '';
+
+  if (!SR) {
+    $('michint').textContent = 'No speech here — use the keyboard mic';
+    $('mic').disabled = true;
+    $('mic').style.opacity = .35;
+  }
+
+  /**
+   * Build a recognizer and wire it up.
+   *
+   * A FRESH OBJECT every session, which is the whole fix for the duplication
+   * bug. Restarting the same instance does NOT clear ev.results - Chrome
+   * re-delivers everything the previous session heard, so the next session's
+   * finals arrive already containing the last session's words. Those then got
+   * appended to a baseText that already held them, and each restart compounded
+   * it: "I", "I have", "I have a", "I have a new"... which is precisely what
+   * one short sentence turned into.
+   *
+   * Android makes it constant rather than occasional, because Chrome there
+   * effectively ignores `continuous` and ends a session after almost every word.
+   */
+  function makeRec() {
+    const r = new SR();
+    r.continuous     = true;
+    r.interimResults = true;
+    r.lang           = 'en-US';
+
+    r.onstart = () => {
+      listening = true;
+      $('mic').classList.add('live');
+      $('michint').textContent = 'Listening — tap to stop';
+    };
+
+    /**
+     * Rebuilt from scratch on every event, never appended to. Chrome re-sends
+     * results it has already delivered, so rebuilding is idempotent where
+     * appending would double them.
+     *
+     * The box is always baseText + committed + this session's finals, so it is
+     * a pure function of the three and cannot drift however often this fires.
+     */
+    r.onresult = ev => {
+      let fin = '', interim = '';
+      for (let i = 0; i < ev.results.length; i++) {
+        const chunk = (ev.results[i][0].transcript || '').trim();
+        if (!chunk) continue;
+
+        if (ev.results[i].isFinal) {
+          // The spec says each result is a DISTINCT segment, so concatenating
+          // them is correct. Android Chrome instead RESTATES the whole
+          // utterance so far in every result - "I", "I have", "I have a", ... -
+          // and concatenating THAT gives "IIII haveI have aI have a new...".
+          // So: if this chunk continues what we already have, it is a
+          // restatement and supersedes it; otherwise it is a genuinely new
+          // segment and gets appended.
+          if (fin && (chunk.startsWith(fin) || fin.startsWith(chunk))) {
+            if (chunk.length > fin.length) fin = chunk;
+          } else {
+            fin = fin ? fin + ' ' + chunk : chunk;
+          }
+        } else {
+          interim = chunk;          // interims restate too - keep only the latest
+        }
+      }
+      r.sessionFinal = fin;
+      const box = $('text');
+      box.value = (baseText + ' ' + committed + ' ' + fin).replace(/\s+/g, ' ').trim();
+      box.scrollTop = box.scrollHeight;
+      $('interim').textContent = interim;
+    };
+
+    r.onerror = ev => {
+      if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+      if (ev.error === 'not-allowed') {
+        flash('Microphone blocked — allow it in site settings', 'bad');
+      } else {
+        flash('Mic: ' + ev.error, 'bad');
+      }
+    };
+
+    r.onend = () => {
+      // Chrome stops on its own after a pause; keep going until he taps stop.
+      if (!listening) return;
+      // Fold THIS session's finals into committed, then hand over to a brand
+      // new recognizer. Reading the box back instead would re-absorb text that
+      // is already in committed, and reusing this object would re-deliver these
+      // same results to the next session - either one double-counts.
+      committed = (committed + ' ' + (r.sessionFinal || '')).replace(/\s+/g, ' ').trim();
+      $('interim').textContent = '';
+      rec = makeRec();
+      try { rec.start(); } catch (e) { stopRec(); }
+    };
+
+    return r;
+  }
+
+  function startRec() {
+    if (!SR || listening) return;
+    baseText = $('text').value;   // the run builds on whatever was already typed
+    committed = '';
+    rec = makeRec();
+    try { rec.start(); } catch (e) { flash('Could not start the mic', 'bad'); }
+  }
+
+  function stopRec() {
+    listening = false;
+    if (rec) { try { rec.stop(); } catch (e) {} }
+    rec = null;
+    $('mic').classList.remove('live');
+    $('michint').textContent = 'Tap and talk';
+    $('interim').textContent = '';
+  }
+
+  $('mic').addEventListener('click', () => listening ? stopRec() : startRec());
+
+  // ── buttons ──────────────────────────────────────────────────────────────
+  $('bank').addEventListener('click', () => {
+    const box = $('text');
+    if (!box.value.trim()) { flash('Nothing to bank'); return; }
+    if (bank(box.value)) { box.value = ''; $('interim').textContent = ''; }
+    stopRec();
+  });
+
+  $('clear').addEventListener('click', () => {
+    $('text').value = ''; $('interim').textContent = ''; stopRec();
+  });
+
+  // ── settings ─────────────────────────────────────────────────────────────
+  $('gear').addEventListener('click', () => {
+    $('owner').value  = cfg.owner;
+    $('repo').value   = cfg.repo;
+    $('branch').value = cfg.branch;
+    $('token').value  = cfg.token;
+    $('cfg').showModal();
+  });
+
+  function readCfg() {
+    cfg.owner  = $('owner').value.trim()  || 'Braizebbq';
+    cfg.repo   = $('repo').value.trim()   || 'braize-idea-vault';
+    cfg.branch = $('branch').value.trim() || 'master';
+    cfg.token  = $('token').value.trim();
+  }
+
+  $('cfgsave').addEventListener('click', () => {
+    readCfg(); saveCfg(); $('cfg').close(); paintStatus(); flush();
+    flash('Saved', 'good');
+  });
+
+  $('cfgtest').addEventListener('click', async () => {
+    readCfg();
+    if (!cfg.token) { flash('No token yet', 'bad'); return; }
+    try {
+      const r = await fetch(
+        'https://api.github.com/repos/' + cfg.owner + '/' + cfg.repo,
+        { headers: { 'Authorization': 'Bearer ' + cfg.token,
+                     'Accept': 'application/vnd.github+json' } });
+      if (r.ok) flash('Connected', 'good');
+      else if (r.status === 404) flash('Repo not found, or token lacks access', 'bad');
+      else if (r.status === 401) flash('Token rejected', 'bad');
+      else flash('GitHub said ' + r.status, 'bad');
+    } catch (e) { flash('No network', 'bad'); }
+  });
+
+  $('help').addEventListener('click', () => $('shapes').showModal());
+  $('shapesclose').addEventListener('click', () => $('shapes').close());
+
+  // ── install ──────────────────────────────────────────────────────────────
+  // Chrome buries "Add to Home screen" in a menu, and an in-app browser (a link
+  // opened from a chat app) has no such menu at all. So surface our own button
+  // the moment Chrome says the app is installable.
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', ev => {
+    ev.preventDefault();
+    deferredPrompt = ev;
+    $('install').hidden = false;
+  });
+
+  $('install').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    $('install').hidden = true;
+    if (outcome === 'accepted') flash('Installing — check your home screen', 'good');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    $('install').hidden = true;
+    flash('Installed', 'good');
+  });
+
+  // ── boot ─────────────────────────────────────────────────────────────────
+  paintStatus();
+  flush();
+  if (!cfg.token) setTimeout(() => $('cfg').showModal(), 350);
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>

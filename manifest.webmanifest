@@ -1,0 +1,20 @@
+{
+  "id": "/braize-vault-capture/",
+  "name": "Braize Vault",
+  "short_name": "Vault",
+  "description": "Capture a thought by voice or typing. Never asks, never fails.",
+  "start_url": "/braize-vault-capture/",
+  "scope": "/braize-vault-capture/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
