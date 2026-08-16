@@ -438,7 +438,24 @@
       // new recognizer. Reading the box back instead would re-absorb text that
       // is already in committed, and reusing this object would re-deliver these
       // same results to the next session - either one double-counts.
-      committed = (committed + ' ' + (r.sessionFinal || '')).replace(/\s+/g, ' ').trim();
+      //
+      // BUT a blind concatenation here re-introduces the exact restatement bug
+      // this file already solves once inside onresult (see the startsWith
+      // supersede there): on some devices the new session's sessionFinal
+      // itself restates words already sitting in committed, not just words
+      // from this session. Concatenating that duplicates and compounds on
+      // every restart - "I don't check telegram", "...telegram maybe", "...
+      // maybe I", growing one word per pause. Same fix, same reasoning,
+      // applied at the session boundary instead of only within one session.
+      const addition = r.sessionFinal || '';
+      if (addition) {
+        if (committed && (addition.startsWith(committed) || committed.startsWith(addition))) {
+          committed = addition.length > committed.length ? addition : committed;
+        } else {
+          committed = committed ? committed + ' ' + addition : addition;
+        }
+      }
+      committed = committed.replace(/\s+/g, ' ').trim();
       $('interim').textContent = '';
       rec = makeRec();
       try { rec.start(); } catch (e) { stopRec(); }

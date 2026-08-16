@@ -8,7 +8,7 @@
  * cache as the fallback when there is no signal. GitHub API calls are never
  * touched: they must fail honestly so the queue can retry them.
  */
-const CACHE = 'braize-vault-v5';   // bump to evict the old shell on update
+const CACHE = 'braize-vault-v6';   // bump to evict the old shell on update
 const SHELL = ['.', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', ev => {
