@@ -1,7 +1,7 @@
 {
   "id": "/braize-vault-capture/",
-  "name": "Braize Vault",
-  "short_name": "Vault",
+  "name": "Jarvish",
+  "short_name": "Jarvish",
   "description": "Capture a thought by voice or typing. Never asks, never fails.",
   "start_url": "/braize-vault-capture/",
   "scope": "/braize-vault-capture/",
